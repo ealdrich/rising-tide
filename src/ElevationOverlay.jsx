@@ -14,22 +14,27 @@ function cacheSet(key, val) {
   elevationCache.set(key, val)
 }
 
+const MAPTILER_KEY = 'qQbqyXXSOJ595wOSETfo'
+
 function getTileUrl(z, x, y) {
-  const awsUrl = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`
   if (import.meta.env.DEV) {
     return `/elevation-tiles/${z}/${x}/${y}.png`
   }
-  // AWS S3 bucket has no CORS headers; route through proxy in production
-  return `https://corsproxy.io/?url=${encodeURIComponent(awsUrl)}`
+  return `https://api.maptiler.com/tiles/terrain-rgb/${z}/${x}/${y}.png?key=${MAPTILER_KEY}`
 }
 
-// Terrarium tile encoding: elevation (meters) = R*256 + G + B/256 - 32768
+// Dev uses AWS terrarium: elevation = R*256 + G + B/256 - 32768
+// Prod uses MapTiler terrain-rgb: elevation = -10000 + (R*65536 + G*256 + B) * 0.1
 function decodeTile(imageData) {
   const { data } = imageData
   const elev = new Float32Array(256 * 256)
   for (let i = 0; i < elev.length; i++) {
     const p = i * 4
-    elev[i] = data[p] * 256 + data[p + 1] + data[p + 2] / 256 - 32768
+    if (import.meta.env.DEV) {
+      elev[i] = data[p] * 256 + data[p + 1] + data[p + 2] / 256 - 32768
+    } else {
+      elev[i] = -10000 + (data[p] * 65536 + data[p + 1] * 256 + data[p + 2]) * 0.1
+    }
   }
   return elev
 }
