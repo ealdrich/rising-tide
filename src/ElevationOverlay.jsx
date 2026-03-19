@@ -25,6 +25,7 @@ function getTileUrl(z, x, y) {
 
 // Dev uses AWS terrarium: elevation = R*256 + G + B/256 - 32768
 // Prod uses MapTiler terrain-rgb: elevation = -10000 + (R*65536 + G*256 + B) * 0.1
+// NaN marks nodata pixels (alpha=0 in terrain-rgb) — drawMask skips them
 function decodeTile(imageData) {
   const { data } = imageData
   const elev = new Float32Array(256 * 256)
@@ -33,7 +34,11 @@ function decodeTile(imageData) {
     if (import.meta.env.DEV) {
       elev[i] = data[p] * 256 + data[p + 1] + data[p + 2] / 256 - 32768
     } else {
-      elev[i] = -10000 + (data[p] * 65536 + data[p + 1] * 256 + data[p + 2]) * 0.1
+      if (data[p + 3] === 0) {
+        elev[i] = NaN  // nodata (ocean / outside coverage)
+      } else {
+        elev[i] = -10000 + (data[p] * 65536 + data[p + 1] * 256 + data[p + 2]) * 0.1
+      }
     }
   }
   return elev
@@ -73,7 +78,10 @@ export default function ElevationOverlay({ thresholdM }) {
         const render = (elevations) => {
           const ctx = canvas.getContext('2d')
           drawMask(ctx, elevations, thresholdRef.current)
+          canvas.style.opacity = '0'
+          canvas.style.transition = 'opacity 0.4s ease'
           done(null, canvas)
+          requestAnimationFrame(() => { canvas.style.opacity = '1' })
         }
 
         if (elevationCache.has(key)) {
