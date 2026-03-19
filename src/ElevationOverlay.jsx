@@ -14,6 +14,15 @@ function cacheSet(key, val) {
   elevationCache.set(key, val)
 }
 
+function getTileUrl(z, x, y) {
+  const awsUrl = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`
+  if (import.meta.env.DEV) {
+    return `/elevation-tiles/${z}/${x}/${y}.png`
+  }
+  // AWS S3 bucket has no CORS headers; route through proxy in production
+  return `https://corsproxy.io/?url=${encodeURIComponent(awsUrl)}`
+}
+
 // Terrarium tile encoding: elevation (meters) = R*256 + G + B/256 - 32768
 function decodeTile(imageData) {
   const { data } = imageData
@@ -70,9 +79,7 @@ export default function ElevationOverlay({ thresholdM }) {
           // Fetch as blob so pixel data is readable regardless of CORS.
           // In dev the Vite proxy makes it same-origin; in production set
           // VITE_ELEVATION_TILE_BASE to a CORS-enabled proxy or tile server.
-          const tileBase = import.meta.env.VITE_ELEVATION_TILE_BASE ?? '/elevation-tiles'
-          const url = `${tileBase}/${coords.z}/${coords.x}/${coords.y}.png`
-          fetch(url)
+          fetch(getTileUrl(coords.z, coords.x, coords.y))
             .then(r => {
               if (!r.ok) throw new Error(r.status)
               return r.blob()
