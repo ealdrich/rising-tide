@@ -35,7 +35,7 @@ function App() {
       {/* Header with controls */}
       <div className="absolute top-0 left-0 right-0 z-[1000] bg-white shadow-md p-4">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Elevation Map</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Rising Tide Elevation Map</h1>
 
           <div className="flex flex-wrap gap-4 items-center">
             {/* Unit Toggle */}
