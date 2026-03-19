@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .map-container {
+            position: relative;
+            width: 500px;
+            height: 300px;
+            border: 2px solid #ccc;
+            overflow: hidden;
+        }
+        .base-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #87CEEB 25%, #98D8C8 50%, #FDB462 75%);
+            z-index: 1;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-conic-gradient(
+                from 2px at 2px,
+                to 2px at 2px,
+                transparent 0%,
+                rgba(0, 0, 0, 0.6) 20%,
+                transparent 20%,
+                rgba(0, 0, 0, 0.6) 20%,
+                transparent 40%
+            );
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .overlay.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <h3>Test Overlay Logic</h3>
+    <div class="map-container">
+        <div class="base-layer"></div>
+        <div class="overlay" id="overlay"></div>
+    </div>
+    
+    <div>
+        <button onclick="toggleOverlay()">Toggle Overlay</button>
+        <button onclick="testPattern()">Test Pattern</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function toggleOverlay() {
+            const overlay = document.getElementById('overlay');
+            overlay.classList.toggle('active');
+            document.getElementById('result').textContent = 
+                overlay.classList.contains('active') ? 'Overlay ON' : 'Overlay OFF';
+        }
+        
+        function testPattern() {
+            const overlay = document.getElementById('overlay');
+            const result = document.getElementById('result');
+            
+            // Test the gradient pattern
+            const testDiv = document.createElement('div');
+            testDiv.style.width = '100px';
+            testDiv.style.height = '100px';
+            testDiv.style.background = overlay.style.background;
+            testDiv.style.position = 'absolute';
+            testDiv.style.top = '0';
+            testDiv.style.left = '0';
+            
+            document.body.appendChild(testDiv);
+            
+            // Check if we can see through to the base layer
+            setTimeout(() => {
+                const baseVisible = testDiv.style.background.includes('transparent 40%');
+                result.textContent = baseVisible ? 
+                    '✅ PATTERN WORKS - Can see base layer in transparent areas' : 
+                    '❌ PATTERN BROKEN - Cannot see base layer';
+                
+                document.body.removeChild(testDiv);
+            }, 100);
+        }
+    </script>
+</body>
+</html>

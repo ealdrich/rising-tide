@@ -1,140 +1,113 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import { CRS } from 'leaflet';
+import React, { useState } from 'react';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import SearchControl from './components/SearchControl';
-import ElevationSlider from './components/ElevationSlider';
-import UnitToggle from './components/UnitToggle';
-import { fetchElevationData } from './utils/elevationApi';
+import './App.css';
+import ElevationOverlay from './ElevationOverlay.jsx';
+
+const FEET_TO_METERS = 0.3048
+const MAX_ELEVATION_FT = 29032  // Everest
+const MAX_ELEVATION_M  = 8849
 
 function App() {
-  const [elevationData, setElevationData] = useState(null);
   const [elevationThreshold, setElevationThreshold] = useState(0);
-  const [units, setUnits] = useState('imperial'); // 'imperial' or 'metric'
-  const [mapCenter, setMapCenter] = useState([39.8283, -98.5795]); // Center of USA
-  const [mapZoom, setMapZoom] = useState(4);
+  const [units, setUnits] = useState('imperial');
 
-  // Convert elevation threshold based on units
-  const getElevationInMeters = () => {
-    if (units === 'imperial') {
-      return elevationThreshold * 0.3048; // feet to meters
+  const isImperial = units === 'imperial'
+  const maxElev = isImperial ? MAX_ELEVATION_FT : MAX_ELEVATION_M
+
+  // Always work in meters internally for the overlay
+  const thresholdM = isImperial
+    ? elevationThreshold * FEET_TO_METERS
+    : elevationThreshold
+
+  const handleUnitToggle = () => {
+    // Convert current threshold to the new unit so the slider doesn't jump
+    if (isImperial) {
+      setElevationThreshold(Math.round(elevationThreshold * FEET_TO_METERS))
     } else {
-      return elevationThreshold; // already in meters
+      setElevationThreshold(Math.round(elevationThreshold / FEET_TO_METERS))
     }
-  };
-
-  // Style function for GeoJSON based on elevation
-  const getElevationStyle = (feature) => {
-    const elevation = feature.properties.elevation || 0;
-    const threshold = getElevationInMeters();
-    
-    if (elevation > threshold) {
-      return {
-        fillColor: '#10b981', // green for above threshold
-        weight: 0.5,
-        opacity: 1,
-        color: 'white',
-        fillOpacity: 0.7
-      };
-    } else {
-      return {
-        fillColor: '#9ca3af', // gray for below threshold
-        weight: 0.5,
-        opacity: 0.3,
-        color: 'white',
-        fillOpacity: 0.2
-      };
-    }
-  };
-
-  // Load elevation data for current map view
-  useEffect(() => {
-    const loadElevationData = async () => {
-      try {
-        const data = await fetchElevationData(mapCenter, mapZoom);
-        setElevationData(data);
-      } catch (error) {
-        console.error('Error loading elevation data:', error);
-      }
-    };
-
-    loadElevationData();
-  }, [mapCenter, mapZoom]);
-
-  // Get max elevation for slider
-  const getMaxElevation = () => {
-    if (units === 'imperial') {
-      return 29032; // Everest height in feet
-    } else {
-      return 8848; // Everest height in meters
-    }
-  };
+    setUnits(isImperial ? 'metric' : 'imperial')
+  }
 
   return (
     <div className="h-screen w-full relative">
       {/* Header with controls */}
       <div className="absolute top-0 left-0 right-0 z-[1000] bg-white shadow-md p-4">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Elevation Map Explorer</h1>
-          
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Elevation Map</h1>
+
           <div className="flex flex-wrap gap-4 items-center">
-            {/* Search Control */}
-            <SearchControl onLocationFound={setMapCenter} />
-            
             {/* Unit Toggle */}
-            <UnitToggle units={units} onToggle={setUnits} />
-            
+            <button
+              onClick={handleUnitToggle}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                isImperial
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {isImperial ? 'Imperial (ft)' : 'Metric (m)'}
+            </button>
+
             {/* Elevation Slider */}
             <div className="flex-1 min-w-64">
-              <ElevationSlider
-                elevation={elevationThreshold}
-                onChange={setElevationThreshold}
-                max={getMaxElevation()}
-                units={units}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Elevation Threshold ({isImperial ? 'feet' : 'meters'}):
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="0"
+                  max={maxElev}
+                  value={elevationThreshold}
+                  onChange={(e) => setElevationThreshold(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-sm font-medium text-gray-900 min-w-24">
+                  {elevationThreshold.toLocaleString()} {isImperial ? 'ft' : 'm'}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Range: 0 to {maxElev.toLocaleString()} {isImperial ? 'ft' : 'm'}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Map */}
-      <div className="h-full pt-40">
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, paddingTop: '9rem' }}>
         <MapContainer
-          center={mapCenter}
-          zoom={mapZoom}
+          center={[40.7608, -111.8910]}
+          zoom={10}
           style={{ height: '100%', width: '100%' }}
-          crs={CRS.EPSG3857}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png"
+            maxZoom={18}
           />
-          
-          {/* Topographic/Elevation overlay */}
-          {elevationData && (
-            <GeoJSON
-              data={elevationData}
-              style={getElevationStyle}
-            />
-          )}
+          <ElevationOverlay thresholdM={thresholdM} />
         </MapContainer>
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-10 bg-white rounded-lg shadow-md p-4">
-        <h3 className="font-semibold text-gray-800 mb-2">Legend</h3>
+      <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-md p-4">
+        <h3 className="font-semibold text-gray-800 mb-2">Elevation Filter</h3>
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded"></div>
-            <span className="text-sm text-gray-700">
-              Above {elevationThreshold} {units === 'imperial' ? 'ft' : 'm'}
-            </span>
+          <div className="flex items-center gap-2 text-sm">
+            <div className="w-4 h-4 rounded" style={{ background: 'rgba(20,20,40,0.82)' }} />
+            <span className="text-gray-700">Below threshold (hidden)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-400 rounded"></div>
-            <span className="text-sm text-gray-700">
-              Below threshold
-            </span>
+          <div className="flex items-center gap-2 text-sm">
+            <div className="w-4 h-4 rounded border border-gray-300" style={{ background: 'transparent' }} />
+            <span className="text-gray-700">Above threshold (visible)</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {elevationThreshold > 0
+              ? `Hiding below ${elevationThreshold.toLocaleString()} ${isImperial ? 'ft' : 'm'}`
+              : 'Drag slider to filter elevations'}
           </div>
         </div>
       </div>
