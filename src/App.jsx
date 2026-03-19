@@ -79,8 +79,8 @@ function App() {
       {/* Map */}
       <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, paddingTop: '9rem' }}>
         <MapContainer
-          center={[40.7608, -111.8910]}
-          zoom={10}
+          center={[45.4654, 9.1859]}
+          zoom={7}
           style={{ height: '100%', width: '100%' }}
         >
           <TileLayer
@@ -97,7 +97,7 @@ function App() {
         <h3 className="font-semibold text-gray-800 mb-2">Elevation Filter</h3>
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
-            <div className="w-4 h-4 rounded" style={{ background: 'rgba(20,20,40,0.82)' }} />
+            <div className="w-4 h-4 rounded" style={{ background: 'rgba(0,30,100,0.82)' }} />
             <span className="text-gray-700">Below threshold (hidden)</span>
           </div>
           <div className="flex items-center gap-2 text-sm">

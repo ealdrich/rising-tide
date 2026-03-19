@@ -32,9 +32,9 @@ function drawMask(ctx, elevations, thresholdM) {
   for (let i = 0; i < elevations.length; i++) {
     if (elevations[i] < thresholdM) {
       const p = i * 4
-      d[p]     = 20   // R
-      d[p + 1] = 20   // G
-      d[p + 2] = 40   // B  (dark blue-gray)
+      d[p]     = 0    // R
+      d[p + 1] = 30   // G
+      d[p + 2] = 100  // B  (deep ocean blue)
       d[p + 3] = 210  // A  (~82% opaque)
     }
     // above threshold: alpha stays 0 (fully transparent — topo shows through)
