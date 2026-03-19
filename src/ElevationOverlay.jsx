@@ -55,7 +55,7 @@ function drawMask(ctx, elevations, thresholdM) {
   const out = ctx.createImageData(256, 256)
   const d = out.data
   for (let i = 0; i < elevations.length; i++) {
-    if (elevations[i] < thresholdM) {
+    if (elevations[i] <= thresholdM) {
       const p = i * 4
       d[p]     = 0    // R
       d[p + 1] = 30   // G
