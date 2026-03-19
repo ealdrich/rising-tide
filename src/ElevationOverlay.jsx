@@ -24,20 +24,26 @@ function getTileUrl(z, x, y) {
 }
 
 // Dev uses AWS terrarium: elevation = R*256 + G + B/256 - 32768
-// Prod uses MapTiler terrain-rgb: elevation = -10000 + (R*65536 + G*256 + B) * 0.1
-// NaN marks nodata pixels (alpha=0 in terrain-rgb) — drawMask skips them
-function decodeTile(imageData) {
+// Prod uses MapTiler terrain-rgb (512x512): elevation = -10000 + (R*65536 + G*256 + B) * 0.1
+// Always returns a 256*256 Float32Array regardless of source tile size.
+// NaN marks nodata pixels (alpha=0) — drawMask skips them.
+function decodeTile(imageData, srcW, srcH) {
   const { data } = imageData
   const elev = new Float32Array(256 * 256)
-  for (let i = 0; i < elev.length; i++) {
-    const p = i * 4
-    if (import.meta.env.DEV) {
-      elev[i] = data[p] * 256 + data[p + 1] + data[p + 2] / 256 - 32768
-    } else {
-      if (data[p + 3] === 0) {
-        elev[i] = NaN  // nodata (ocean / outside coverage)
+  const scaleX = srcW / 256
+  const scaleY = srcH / 256
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const p = (Math.floor(y * scaleY) * srcW + Math.floor(x * scaleX)) * 4
+      const i = y * 256 + x
+      if (import.meta.env.DEV) {
+        elev[i] = data[p] * 256 + data[p + 1] + data[p + 2] / 256 - 32768
       } else {
-        elev[i] = -10000 + (data[p] * 65536 + data[p + 1] * 256 + data[p + 2]) * 0.1
+        if (data[p + 3] === 0) {
+          elev[i] = NaN  // nodata (ocean / outside coverage)
+        } else {
+          elev[i] = -10000 + (data[p] * 65536 + data[p + 1] * 256 + data[p + 2]) * 0.1
+        }
       }
     }
   }
@@ -103,12 +109,14 @@ export default function ElevationOverlay({ thresholdM }) {
               img.onload = () => {
                 URL.revokeObjectURL(objUrl)
                 try {
+                  const w = img.naturalWidth
+                  const h = img.naturalHeight
                   const off = document.createElement('canvas')
-                  off.width = 256
-                  off.height = 256
+                  off.width = w
+                  off.height = h
                   const ctx = off.getContext('2d', { willReadFrequently: true })
                   ctx.drawImage(img, 0, 0)
-                  const elevations = decodeTile(ctx.getImageData(0, 0, 256, 256))
+                  const elevations = decodeTile(ctx.getImageData(0, 0, w, h), w, h)
                   cacheSet(key, elevations)
                   render(elevations)
                 } catch {
